@@ -131,7 +131,7 @@ listenはnginxの待ち受けポート、server_nameはこの設定内容が適�
 半角スペース区切りで複数のドメイン名を並べることができるようです。  
 というわけで、初期値の `localhost` に加えて、デフォルト用のドメインにも割り当てておきます。
 ~~~nginx
-    server_name  localhost  nginx-training001.default;
+    server_name  localhost  nginx-training.default;
 ~~~
 
 ### location ディレクティブ
@@ -148,7 +148,7 @@ location / {
 }
 ~~~
 と設定されていますので、httpリクエストに対して `/usr/share/nginx/html` ディレクトリの内部が参照されます。  
-今回は `/var/www/public/nginx-training001.default` を指定しました。  
+今回は `/var/www/public/nginx-training.default` を指定しました。  
 web公開用によく使う`/var/www` 配下に、ドメインごとに分けて公開ディレクトリを持てるように設定します。  
 ついでに、docker-compose.ymlのvolumesにもこれに対応するディレクトリを追加しておきます。
 
@@ -183,17 +183,17 @@ volumes:
 ~~~
 
 つづいて、ホストの `sites-available` ディレクトリにバーチャルホスト用のconfファイルを作成します。  
-hostsファイルに設定してある `nginx-training001-1.local` `nginx-training001-2.local` `nginx-training001-3.local` のファイルを用意します。  
-例として `nginx-training001-1.local.conf`はこんな感じにしました。
+hostsファイルに設定してある `nginx-training-01.local` `nginx-training-02.local` `nginx-training-03.local` のファイルを用意します。  
+例として `nginx-training-01.local.conf`はこんな感じにしました。
 ~~~nginx
 server{
     listen       80;
     listen  [::]:80;
-    server_name  nginx-training001-1.local;
+    server_name  nginx-training-01.local;
 
 	# /var/www/public 内に作成したディレクトリをルートに設定
 	location / {
-		root /var/www/public/nginx-training001-1.local;
+		root /var/www/public/nginx-training-01.local;
 	}
 }
 ~~~
@@ -202,9 +202,9 @@ server{
 
 それから、`sites-enabled` ディレクトリにシンボリックリンクを作ります。
 ~~~bash
-$ ln -s ../sites-available/nginx-training001-1.local.conf nginx-training001-1.local.conf
+$ ln -s ../sites-available/nginx-training-01.local.conf nginx-training-01.local.conf
 $ ls -l
-0 lrwxrwxrwx 1 uchiida uchiida 49 Nov  1 18:18 nginx-training001-1.local.conf -> ../sites-available/nginx-training001-1.local.conf
+0 lrwxrwxrwx 1 uchiida uchiida 49 Nov  1 18:18 nginx-training-01.local.conf -> ../sites-available/nginx-training-01.local.conf
 ~~~
 
 最後に、作成した設定ファイルを`nginx.conf` からincludeすれば設定は完了です。
@@ -213,7 +213,7 @@ $ ls -l
     include /etc/nginx/sites-enabled/*.conf;
 ~~~
 
-これで、 ブラウザからhttp://nginx-training001-1.local:18080/ にアクセスして、作成したindex.htmlが表示できれば成功です。  
+これで、 ブラウザからhttp://nginx-training-01.local:18080/ にアクセスして、作成したindex.htmlが表示できれば成功です。  
 
 ## お疲れさまでした！
 `server` ブロックでバーチャルホスト設定ができたところまでで、training001は完了としました。  
