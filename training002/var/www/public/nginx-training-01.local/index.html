@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>nginx-training-01.local of training002!</title>
+</head>
+<body>
+	<h1>nginx-training-01.local</h1>
+	<p>this is <a href="http://nginx-training-01.local:18080">http://nginx-training-01.local</a></p>
+	<div>served on nginx container.</div>
+	<h2>test of multiple basic authentication</h2>
+	<p>The following directories require different basic authentication.</p>
+	<dl>
+		<dt><a href="http://nginx-training-01.local:18080/user001">http://nginx-training-01.local:18080/user001</a></dt>
+		<dd>ID: user001 / password: USER001</dd>
+		<dt><a href="http://nginx-training-01.local:18080/user002">http://nginx-training-01.local:18080/user002</a></dt>
+		<dd>ID: user002 / password: USER002</dd>
+		<dt><a href="http://nginx-training-01.local:18080/user003">http://nginx-training-01.local:18080/user003</a></dt>
+		<dd>ID: user003 / password: USER003</dd>
+	</dl>
+</body>
+</html>

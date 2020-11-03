@@ -1,0 +1,147 @@
+# enginx.conf
+# training002 では、ゼロベースで記述してみます
+
+#user ディレクティブ:
+#  nginxのworkerプロセスを実行するユーザー名を指定できる
+user  nginx;
+
+#worker_precesses ディレクティブ:
+#  workerプロセスの数を設定できる。auto でCPUのコア数が自動的に設定される
+worker_precesses  auto;
+
+#error_log ディレクティブ: error_logの格納先(ファイル名)を設定できる
+#  第二引数(というのか…)は格納するエラーレベル。
+#  エラーレベルは以下の中から選択できる
+#  - emerg ：サーバが稼動できないほどの重大なエラー
+#  - alert ：critよりも重大なエラー
+#  - crit ：重大なエラー
+#  - error エラー
+#  - warn ：警告
+#  - notice ：通知メッセージ
+#  - info ：サーバ情報
+#  - debug ：デバック用の情報
+error_log  /var/log/nginx/error.log warn;
+
+#pid ディレクティブ:
+#  masterプロセスのPIDを保存しておくファイル名を設定できる
+#  あえて変更する理由が思いつかない…ので、基本的にはデフォルト値(/var/run/nginx.pid)で良いと思われる
+pid  /var/run/nginx.pid;
+
+#events コンテキスト:
+#  調べたけどよくわからない…イベント処理？接続？に関する一般的な設定を行うものらしい…
+#  events {}は設定ファイル全体でメインディレクティブにひとつしか記述できない。
+events{
+	#worker_connections ディレクティブ:
+	#  ひとつのワーカープロセスが同時に処理するコネクション数の上限を設定できる
+	#  つまり最大接続コネクション数は、　
+	#  {worker_precesses ディレクティブで設定したworkerプロセスの数} * {worker_connections ディレクティブで設定したコネクション数}
+	#  ということかな…
+	worker_connections  1024;
+
+	#use ディレクティブ:
+	#  イベントの処理方式を設定できる。よく分からないけど、Linuxの場合は epollコマンドを選択しておくのが無難とのこと。
+	#  manを読んでみたところ、epollコマンドはイベント通知と処理を取り扱うコマンド。
+	#  ファイルディスクリプタを監視し、ディスクリプタの状態が変わったものに対して通知を行う…らしい。
+	#  前提知識が不足しすぎていて、調べても正確に理解できず。
+	#  別の機会に改めて学習しなおす必要あり。
+	#  https://linuxjm.osdn.jp/html/LDP_man-pages/man7/epoll.7.html
+	#  ちなみに、設定しなかった場合はOSに合わせて自動的に設定されるとのこと。
+	use  epoll;
+
+	#multi_accept ディレクティブ:
+	#  ワーカープロセスが複数のコネクションを同時に受け入れるかの設定。デフォルトはoff。
+	#  onになっているときは、コネクションを同時に処理するので後から入ってきたコネクションの
+	#  順番待ちが軽減される代わりに、重い処理を要求してきたコネクションへのレスポンスが
+	#  遅くなる可能性がある、ということだと思われる。
+	#  offだった場合はコネクションが入ってきた順番に処理を行うのでnginx全体として
+	#  同時に処理するコネクションの最大数がワーカープロセスの数に制限される代わりに、
+	#  重い処理を要求した場合のレスポンスが遅くなりづらくなる。
+	#  複数のワーカープロセスを利用できる環境であれば、offでもよいのかもしれない…
+	#  ワーカープロセスが1つしか使えないような環境でoffにしていると、
+	#  ひとつのコネクションの対応が完了するまで次のコネクションの処理に移れないことになるので、
+	#  サービス全体の応答性を考えるとonにしておく必要があると思われる。
+	multi_accept  off;
+
+	#accept_mutex ディレクティブ:
+	#  新しいコネクションが発生した際に、ワーカープロセスをどのように起動するかの設定。
+	#  offの場合は全てのワーカープロセスを起動し、最初にコネクションを受け入れたプロセスで処理を開始する。
+	#  それ以外のプロセスはまた待機状態に戻るため、コネクションが少ない場合には、コネクションを受け入れられなかった
+	#  プロセスが無駄に起動したことになってしまい、起動のために利用したリソースが無駄になってしまう。
+	#  (これをthundering herd問題というらしい)
+	#  onになっている場合はワーカープロセスは順番に新しい接続を受け入れるようになる。
+	#  無駄を生じないように、ワーカープロセスを一斉に起動するのではなく、ひとつずつ起動するということかな…
+	#  1.11.3以前はデフォルトでonだったが、Linuxカーネル側でこの問題に対処することができるようになった(SO_REUSEPORT)ので、
+	#  それ以降のバージョンではデフォルトでoffになっている。
+	accept_mutex  off;
+}
+
+#http コンテキスト:
+#  httpモジュールにで利用できる機能に関する設定を行える。
+http{
+	#types ディレクティブ:
+	#  MIMEタイプの定義を行うディレクティブ。
+	#  デフォルトでは、/etc/nginx/mime.types をインクルードしている
+	include /etc/nginx/mime.types;
+
+	#default_type ディレクティブ:
+	#  types ディレクティブに定義されているMIMEタイプに一致しなかった場合に適用されるMIMEタイプ。
+	default_type  text/plain;
+
+	#log_format ディレクティブ:
+	#  アクセスログの書式を設定するディレクティブ。
+	#  書式と、その名前を付けることができる。書式の設定には$remote_addrなどの変数を利用することができる。
+	#  利用できる変数の一覧は以下を参照。:
+	#  http://nginx.org/en/docs/http/ngx_http_log_module.html
+	log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+    #access_log ディレクティブ：
+	#  アクセスログの格納先ファイルを設定できる。
+	#  格納先のパスと、log_formatで定義したフォーマット名称を設定する。
+    access_log  /var/log/nginx/access.log  main;
+
+    #sedefile ディレクティブ:
+	#  onにすると、ファイル送信にsendfile() APIを利用する。デフォルトはon。
+	#  sendfile()の詳細はこちら↓:
+	#  https://linuxjm.osdn.jp/html/LDP_man-pages/man2/sendfile.2.html
+	#  ファイルの送信がカーネル空間内で行われるため速度の向上が期待できる。
+	#  カーネル内のキャッシュデータを送信してしまうので、頻繁にファイルの内容が更新されるとき…
+	#  たとえば開発サーバで、cssやjs等の調整を行うときなどは、offにしたほうが良いかもしれない。
+	sendfile  on;
+	
+	#tcp_nopush ディレクティブ:
+	#  sendfile ディレクティブの設定がonのとき、レスポンスヘッダとコンテンツをまとめて送信する。
+	#  (ソケットにオプションを付与する…らしい)
+	#  https://qiita.com/hana_shin/items/9b4f4c5e2c8e740c61bb
+	tcp_nopush  on;
+
+    #keepalive_timeout ディレクティブ:
+	#  tcpコネクションのタイムアウト時間を設定する。
+	#  タイムアウトする前に同じクライアントから連続してリクエストがあった場合、
+	#  同じtcpコネクションを利用してレスポンスを返すため効率が良い。
+	keepalive_timeout  60s;
+
+    #keepalive_requests ディレクティブ:
+	#  keepaliveで維持されたひとつのtcpコネクションに対してリクエストできる回数の最大値。
+	#  連続でリクエストを送られても、この上限値に達したらtcpコネクションを切断する。
+    keepalive_requests  100;
+
+    #server_tokens ディレクティブ:
+	#  エラーページとリクエストヘッダにnginxのバージョン情報を付加するかを選択できる。
+	#  offにするとバージョン情報を秘匿する。
+	server_tokens  off;
+
+	#port_in_redirect ディレクティブ:
+	#  リダイレクト時にポートの指定を残すか除去するかの設定です。
+	#  今回は80, 443の標準ポート以外を利用しているため、ポート番号を残す設定にしています。
+	port_in_redirect on;
+
+    # インデックスファイルをデフォルトに設定
+    index  index.html index.htm;
+    # バーチャルホスト用の設定ファイルをインクルード
+    include /etc/nginx/sites-enabled/*.conf;
+
+    include /etc/nginx/conf.d/*.conf;
+
+}

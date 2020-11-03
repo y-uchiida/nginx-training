@@ -1,0 +1,19 @@
+# docker-compose.yml
+
+version: '3.1'
+
+services:
+  nginx:
+    image: nginx:1.19.3-alpine
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/sites-available:/etc/nginx/sites-available
+      - ./nginx/sites-enabled:/etc/nginx/sites-enabled
+      - ./nginx/ssl/nginx-training-02.local.key:/etc/nginx/ssl/nginx-training-02.local.key
+      - ./nginx/ssl/nginx-training-02.local.crt:/etc/nginx/ssl/nginx-training-02.local.crt
+      - ./var/www/public:/var/www/public
+      - ./var/www/settings:/var/www/settings
+    ports:
+      - '18080:80'
+      - '10443:443'
